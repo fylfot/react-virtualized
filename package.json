@@ -153,5 +153,5 @@
     "transform": [
       "loose-envify"
     ]
-  },
+  }
 }
