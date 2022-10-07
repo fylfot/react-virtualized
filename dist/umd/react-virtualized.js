@@ -2,6 +2,7 @@
     "object" == typeof exports && "undefined" != typeof module ? factory(exports, require("react"), require("react-dom")) : "function" == typeof define && define.amd ? define([ "exports", "react", "react-dom" ], factory) : factory((global = global || self).ReactVirtualized = {}, global.React, global.ReactDOM);
 }(this, function(exports, React, ReactDOM) {
     "use strict";
+    var React__default = "default" in React ? React.default : React;
     function _typeof(obj) {
         return (_typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function(obj) {
             return typeof obj;
@@ -358,9 +359,13 @@
                                 style.styleSheet ? style.styleSheet.cssText = css : style.appendChild(doc.createTextNode(css)), 
                                 head.appendChild(style);
                             }
-                        }(doc), element.__resizeLast__ = {}, element.__resizeListeners__ = [], (element.__resizeTriggers__ = doc.createElement("div")).className = "resize-triggers", 
-                        element.__resizeTriggers__.innerHTML = '<div class="expand-trigger"><div></div></div><div class="contract-trigger"></div>', 
-                        element.appendChild(element.__resizeTriggers__), resetTriggers(element), element.addEventListener("scroll", scrollListener, !0), 
+                        }(doc), element.__resizeLast__ = {}, element.__resizeListeners__ = [], (element.__resizeTriggers__ = doc.createElement("div")).className = "resize-triggers";
+                        var expandTrigger = doc.createElement("div");
+                        expandTrigger.className = "expand-trigger", expandTrigger.appendChild(doc.createElement("div"));
+                        var contractTrigger = doc.createElement("div");
+                        contractTrigger.className = "contract-trigger", element.__resizeTriggers__.appendChild(expandTrigger), 
+                        element.__resizeTriggers__.appendChild(contractTrigger), element.appendChild(element.__resizeTriggers__), 
+                        resetTriggers(element), element.addEventListener("scroll", scrollListener, !0), 
                         animationstartevent && (element.__resizeTriggers__.__animationListener__ = function(e) {
                             e.animationName == animationName && resetTriggers(element);
                         }, element.__resizeTriggers__.addEventListener(animationstartevent, element.__resizeTriggers__.__animationListener__));
@@ -1484,10 +1489,12 @@
             value: function(nextProps, prevState) {
                 return 0 !== nextProps.cellCount || 0 === prevState.scrollLeft && 0 === prevState.scrollTop ? nextProps.scrollLeft !== prevState.scrollLeft || nextProps.scrollTop !== prevState.scrollTop ? {
                     scrollLeft: null != nextProps.scrollLeft ? nextProps.scrollLeft : prevState.scrollLeft,
-                    scrollTop: null != nextProps.scrollTop ? nextProps.scrollTop : prevState.scrollTop
+                    scrollTop: null != nextProps.scrollTop ? nextProps.scrollTop : prevState.scrollTop,
+                    scrollPositionChangeReason: SCROLL_POSITION_CHANGE_REASONS_REQUESTED
                 } : null : {
                     scrollLeft: 0,
-                    scrollTop: 0
+                    scrollTop: 0,
+                    scrollPositionChangeReason: SCROLL_POSITION_CHANGE_REASONS_REQUESTED
                 };
             }
         } ]), CollectionView;
@@ -2187,7 +2194,9 @@
             }, renderedCell = void 0;
             null != (renderedCell = !isScrollingOptOut && !isScrolling || horizontalOffsetAdjustment || verticalOffsetAdjustment ? cellRenderer(cellRendererParams) : (cellCache[key] || (cellCache[key] = cellRenderer(cellRendererParams)), 
             cellCache[key])) && !1 !== renderedCell && (warnAboutMissingStyle(parent, renderedCell), 
-            renderedCells.push(renderedCell));
+            renderedCell.props.role || (renderedCell = React__default.cloneElement(renderedCell, {
+                role: "gridcell"
+            })), renderedCells.push(renderedCell));
         }
         return renderedCells;
     }
@@ -2812,7 +2821,7 @@
         autoHeight: !1,
         autoWidth: !1,
         cellRangeRenderer: defaultCellRangeRenderer,
-        containerRole: "rowgroup",
+        containerRole: "row",
         containerStyle: {},
         estimatedColumnSize: 100,
         estimatedRowSize: 30,
@@ -4788,7 +4797,8 @@
                 }), onResize({
                     height: dimensions.height,
                     width: dimensions.width
-                }));
+                })), !0 === this.props.updateScrollTopOnUpdatePosition && (this.__handleWindowScrollEvent(), 
+                this.__resetIsScrolling());
             }
         }, {
             key: "componentDidMount",

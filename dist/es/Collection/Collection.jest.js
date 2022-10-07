@@ -416,7 +416,7 @@ describe('Collection', function () {
   describe(':scrollLeft and :scrollTop properties', function () {
     it('should render correctly when an initial :scrollLeft and :scrollTop properties are specified', function () {
       var indices;
-      render(getMarkup({
+      var collection = render(getMarkup({
         onSectionRendered: function onSectionRendered(params) {
           indices = params.indices;
         },
@@ -424,6 +424,7 @@ describe('Collection', function () {
         scrollTop: 2
       }));
       compareArrays(indices, [3, 4, 5, 7, 8, 9]);
+      expect(collection._collectionView.state.scrollPositionChangeReason).toEqual('requested');
     });
     it('should render correctly when :scrollLeft and :scrollTop properties are updated', function () {
       var indices;
@@ -433,7 +434,7 @@ describe('Collection', function () {
         }
       }));
       compareArrays(indices, [0, 1, 2, 3]);
-      render(getMarkup({
+      var collection = render(getMarkup({
         onSectionRendered: function onSectionRendered(params) {
           indices = params.indices;
         },
@@ -441,6 +442,7 @@ describe('Collection', function () {
         scrollTop: 2
       }));
       compareArrays(indices, [3, 4, 5, 7, 8, 9]);
+      expect(collection._collectionView.state.scrollPositionChangeReason).toEqual('requested');
     });
   });
   describe('styles, classNames, and ids', function () {

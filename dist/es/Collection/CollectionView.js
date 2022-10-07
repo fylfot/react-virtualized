@@ -460,12 +460,14 @@ function (_React$PureComponent) {
       if (nextProps.cellCount === 0 && (prevState.scrollLeft !== 0 || prevState.scrollTop !== 0)) {
         return {
           scrollLeft: 0,
-          scrollTop: 0
+          scrollTop: 0,
+          scrollPositionChangeReason: SCROLL_POSITION_CHANGE_REASONS.REQUESTED
         };
       } else if (nextProps.scrollLeft !== prevState.scrollLeft || nextProps.scrollTop !== prevState.scrollTop) {
         return {
           scrollLeft: nextProps.scrollLeft != null ? nextProps.scrollLeft : prevState.scrollLeft,
-          scrollTop: nextProps.scrollTop != null ? nextProps.scrollTop : prevState.scrollTop
+          scrollTop: nextProps.scrollTop != null ? nextProps.scrollTop : prevState.scrollTop,
+          scrollPositionChangeReason: SCROLL_POSITION_CHANGE_REASONS.REQUESTED
         };
       }
 

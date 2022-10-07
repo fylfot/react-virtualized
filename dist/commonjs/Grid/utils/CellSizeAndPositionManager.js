@@ -1,376 +1,521 @@
-"use strict";
+'use strict';
 
-var _interopRequireDefault = require("@babel/runtime/helpers/interopRequireDefault");
+var _interopRequireDefault = require('@babel/runtime/helpers/interopRequireDefault');
 
-Object.defineProperty(exports, "__esModule", {
-  value: true
+Object.defineProperty(exports, '__esModule', {
+  value: true,
 });
-exports["default"] = void 0;
+exports['default'] = void 0;
 
-var _typeof2 = _interopRequireDefault(require("@babel/runtime/helpers/typeof"));
+var _typeof2 = _interopRequireDefault(require('@babel/runtime/helpers/typeof'));
 
-var _classCallCheck2 = _interopRequireDefault(require("@babel/runtime/helpers/classCallCheck"));
+var _classCallCheck2 = _interopRequireDefault(
+  require('@babel/runtime/helpers/classCallCheck'),
+);
 
-var _createClass2 = _interopRequireDefault(require("@babel/runtime/helpers/createClass"));
+var _createClass2 = _interopRequireDefault(
+  require('@babel/runtime/helpers/createClass'),
+);
 
-var _defineProperty2 = _interopRequireDefault(require("@babel/runtime/helpers/defineProperty"));
+var _defineProperty2 = _interopRequireDefault(
+  require('@babel/runtime/helpers/defineProperty'),
+);
 
-var _types = require("../types");
+/*:: import type {Alignment, CellSize, VisibleCellRange} from '../types';*/
+
+/*:: type CellSizeAndPositionManagerParams = {
+  cellCount: number,
+  cellSize: CellSize,
+  estimatedCellSize: number,
+};*/
+
+/*:: type ConfigureParams = {
+  cellCount: number,
+  estimatedCellSize: number,
+  cellSize: CellSize,
+};*/
+
+/*:: type GetUpdatedOffsetForIndex = {
+  align: Alignment,
+  containerSize: number,
+  currentOffset: number,
+  targetIndex: number,
+};*/
+
+/*:: type GetVisibleCellRangeParams = {
+  containerSize: number,
+  offset: number,
+};*/
+
+/*:: type SizeAndPositionData = {
+  offset: number,
+  size: number,
+};*/
 
 /**
  * Just-in-time calculates and caches size and position information for a collection of cells.
  */
 var CellSizeAndPositionManager =
-/*#__PURE__*/
-function () {
-  // Cache of size and position data for cells, mapped by cell index.
-  // Note that invalid values may exist in this map so only rely on cells up to this._lastMeasuredIndex
-  // Measurements for cells up to this index can be trusted; cells afterward should be estimated.
-  // Used in deferred mode to track which cells have been queued for measurement.
-  function CellSizeAndPositionManager(_ref) {
-    var cellCount = _ref.cellCount,
+  /*#__PURE__*/
+  (function() {
+    // Cache of size and position data for cells, mapped by cell index.
+    // Note that invalid values may exist in this map so only rely on cells up to this._lastMeasuredIndex
+    // Measurements for cells up to this index can be trusted; cells afterward should be estimated.
+    // Used in deferred mode to track which cells have been queued for measurement.
+    function CellSizeAndPositionManager(_ref) {
+      var cellCount = _ref.cellCount,
         cellSize = _ref.cellSize,
         estimatedCellSize = _ref.estimatedCellSize;
-    (0, _classCallCheck2["default"])(this, CellSizeAndPositionManager);
-    (0, _defineProperty2["default"])(this, "_cellSizeAndPositionData", {});
-    (0, _defineProperty2["default"])(this, "_lastMeasuredIndex", -1);
-    (0, _defineProperty2["default"])(this, "_lastBatchedIndex", -1);
-    (0, _defineProperty2["default"])(this, "_cellCount", void 0);
-    (0, _defineProperty2["default"])(this, "_cellSize", void 0);
-    (0, _defineProperty2["default"])(this, "_estimatedCellSize", void 0);
-    this._cellCount = cellCount;
-    this._cellSize = cellSize;
-    this._estimatedCellSize = estimatedCellSize;
-  }
-
-  (0, _createClass2["default"])(CellSizeAndPositionManager, [{
-    key: "_getSize",
-    value: function _getSize(index) {
-      return typeof this._cellSize === 'function' ? this._cellSize({
-        index: index
-      }) : this._cellSize;
-    }
-  }, {
-    key: "areOffsetsAdjusted",
-    value: function areOffsetsAdjusted() {
-      return false;
-    }
-  }, {
-    key: "configure",
-    value: function configure(_ref2) {
-      var cellCount = _ref2.cellCount,
-          estimatedCellSize = _ref2.estimatedCellSize,
-          cellSize = _ref2.cellSize;
+      (0, _classCallCheck2['default'])(this, CellSizeAndPositionManager);
+      (0, _defineProperty2['default'])(this, '_cellSizeAndPositionData', {});
+      (0, _defineProperty2['default'])(this, '_lastMeasuredIndex', -1);
+      (0, _defineProperty2['default'])(this, '_lastBatchedIndex', -1);
+      (0, _defineProperty2['default'])(this, '_cellCount', void 0);
+      (0, _defineProperty2['default'])(this, '_cellSize', void 0);
+      (0, _defineProperty2['default'])(this, '_estimatedCellSize', void 0);
       this._cellCount = cellCount;
-      this._estimatedCellSize = estimatedCellSize;
       this._cellSize = cellSize;
+      this._estimatedCellSize = estimatedCellSize;
     }
-  }, {
-    key: "getCellCount",
-    value: function getCellCount() {
-      return this._cellCount;
-    }
-  }, {
-    key: "getEstimatedCellSize",
-    value: function getEstimatedCellSize() {
-      return this._estimatedCellSize;
-    }
-  }, {
-    key: "getLastMeasuredIndex",
-    value: function getLastMeasuredIndex() {
-      return this._lastMeasuredIndex;
-    }
-  }, {
-    key: "getOffsetAdjustment",
-    value: function getOffsetAdjustment() {
-      return 0;
-    }
-  }, {
-    key: "_validateIndex",
-    value: function _validateIndex(index) {
-      if (index < 0 || index >= this._cellCount) {
-        throw Error("Requested index ".concat(index, " is outside of range 0..").concat(this._cellCount));
-      }
-    }
-    /**
-     * This method returns the size and position of a cell without the need to iterate over,
-     * and cache, all cells up to the passed index.
-     * In case the CellSize is a number, we can just multiply to find the offset.
-     */
 
-  }, {
-    key: "_arithmeticallyCalculateSizeAndPosition",
-    value: function _arithmeticallyCalculateSizeAndPosition(index) {
-      this._validateIndex(index);
-
-      if (typeof this._cellSize !== 'number') {
-        throw Error("_calculateSizeAndPositionByHeight should only be called if CellSize is a number.\n         Current CellSize type is ".concat((0, _typeof2["default"])(this._cellSize), "."));
-      }
-
-      return {
-        offset: this._cellSize * index,
-        size: this._cellSize
-      };
-    }
-    /**
-     * This method returns the size and position for the cell at the specified index.
-     * It just-in-time calculates (or used cached values) for cells leading up to the index.
-     */
-
-  }, {
-    key: "_iterativelyCalculateSizeAndPosition",
-    value: function _iterativelyCalculateSizeAndPosition(index) {
-      this._validateIndex(index);
-
-      if (index > this._lastMeasuredIndex) {
-        var lastMeasuredCellSizeAndPosition = this.getSizeAndPositionOfLastMeasuredCell();
-        var offset = lastMeasuredCellSizeAndPosition.offset + lastMeasuredCellSizeAndPosition.size;
-
-        for (var i = this._lastMeasuredIndex + 1; i <= index; i++) {
-          var size = this._getSize(i); // undefined or NaN probably means a logic error in the size getter.
-          // null means we're using CellMeasurer and haven't yet measured a given index.
-
-
-          if (size === undefined || isNaN(size)) {
-            throw Error("Invalid size returned for cell ".concat(i, " of value ").concat(size));
-          } else if (size === null) {
-            this._cellSizeAndPositionData[i] = {
-              offset: offset,
-              size: 0
-            };
-            this._lastBatchedIndex = index;
-          } else {
-            this._cellSizeAndPositionData[i] = {
-              offset: offset,
-              size: size
-            };
-            offset += size;
-            this._lastMeasuredIndex = index;
+    (0, _createClass2['default'])(CellSizeAndPositionManager, [
+      {
+        key: '_getSize',
+        value: function _getSize(
+          index,
+          /*: number*/
+        ) /*: number*/
+        {
+          return typeof this._cellSize === 'function'
+            ? this._cellSize({
+                index: index,
+              })
+            : this._cellSize;
+        },
+      },
+      {
+        key: 'areOffsetsAdjusted',
+        value: function areOffsetsAdjusted() {
+          return false;
+        },
+      },
+      {
+        key: 'configure',
+        value: function configure(_ref2) {
+          var cellCount = _ref2.cellCount,
+            estimatedCellSize = _ref2.estimatedCellSize,
+            cellSize = _ref2.cellSize;
+          this._cellCount = cellCount;
+          this._estimatedCellSize = estimatedCellSize;
+          this._cellSize = cellSize;
+        },
+      },
+      {
+        key: 'getCellCount',
+        value: function getCellCount() /*: number*/
+        {
+          return this._cellCount;
+        },
+      },
+      {
+        key: 'getEstimatedCellSize',
+        value: function getEstimatedCellSize() /*: number*/
+        {
+          return this._estimatedCellSize;
+        },
+      },
+      {
+        key: 'getLastMeasuredIndex',
+        value: function getLastMeasuredIndex() /*: number*/
+        {
+          return this._lastMeasuredIndex;
+        },
+      },
+      {
+        key: 'getOffsetAdjustment',
+        value: function getOffsetAdjustment() {
+          return 0;
+        },
+      },
+      {
+        key: '_validateIndex',
+        value: function _validateIndex(
+          index,
+          /*: number*/
+        ) {
+          if (index < 0 || index >= this._cellCount) {
+            throw Error(
+              'Requested index '
+                .concat(index, ' is outside of range 0..')
+                .concat(this._cellCount),
+            );
           }
-        }
-      }
+        },
+        /**
+         * This method returns the size and position of a cell without the need to iterate over,
+         * and cache, all cells up to the passed index.
+         * In case the CellSize is a number, we can just multiply to find the offset.
+         */
+      },
+      {
+        key: '_arithmeticallyCalculateSizeAndPosition',
+        value: function _arithmeticallyCalculateSizeAndPosition(
+          index,
+          /*: number*/
+        ) /*: SizeAndPositionData*/
+        {
+          this._validateIndex(index);
 
-      return this._cellSizeAndPositionData[index];
-    }
-    /**
-     * This method returns the size and position for the cell at the specified index.
-     * It decides on the correct calculation method according to the type of CellSize.
-     */
+          if (typeof this._cellSize !== 'number') {
+            throw Error(
+              '_calculateSizeAndPositionByHeight should only be called if CellSize is a number.\n         Current CellSize type is '.concat(
+                (0, _typeof2['default'])(this._cellSize),
+                '.',
+              ),
+            );
+          }
 
-  }, {
-    key: "getSizeAndPositionOfCell",
-    value: function getSizeAndPositionOfCell(index) {
-      this._validateIndex(index);
+          return {
+            offset: this._cellSize * index,
+            size: this._cellSize,
+          };
+        },
+        /**
+         * This method returns the size and position for the cell at the specified index.
+         * It just-in-time calculates (or used cached values) for cells leading up to the index.
+         */
+      },
+      {
+        key: '_iterativelyCalculateSizeAndPosition',
+        value: function _iterativelyCalculateSizeAndPosition(
+          index,
+          /*: number*/
+        ) /*: SizeAndPositionData*/
+        {
+          this._validateIndex(index);
 
-      if (typeof this._cellSize === 'number') {
-        return this._arithmeticallyCalculateSizeAndPosition(index);
-      }
+          if (index > this._lastMeasuredIndex) {
+            var lastMeasuredCellSizeAndPosition = this.getSizeAndPositionOfLastMeasuredCell();
+            var offset =
+              lastMeasuredCellSizeAndPosition.offset +
+              lastMeasuredCellSizeAndPosition.size;
 
-      return this._iterativelyCalculateSizeAndPosition(index);
-    }
-  }, {
-    key: "getSizeAndPositionOfLastMeasuredCell",
-    value: function getSizeAndPositionOfLastMeasuredCell() {
-      return this._lastMeasuredIndex >= 0 ? this._cellSizeAndPositionData[this._lastMeasuredIndex] : {
-        offset: 0,
-        size: 0
-      };
-    }
-    /**
-     * Total size of all cells being measured.
-     * This value will be completely estimated initially.
-     * As cells are measured, the estimate will be updated.
-     * If cellSize is numeric, just calculate the height.
-     */
+            for (var i = this._lastMeasuredIndex + 1; i <= index; i++) {
+              var size = this._getSize(i); // undefined or NaN probably means a logic error in the size getter.
+              // null means we're using CellMeasurer and haven't yet measured a given index.
 
-  }, {
-    key: "getTotalSize",
-    value: function getTotalSize() {
-      if (typeof this._cellSize === 'number') {
-        return this._cellCount * this._cellSize;
-      }
+              if (size === undefined || isNaN(size)) {
+                throw Error(
+                  'Invalid size returned for cell '
+                    .concat(i, ' of value ')
+                    .concat(size),
+                );
+              } else if (size === null) {
+                this._cellSizeAndPositionData[i] = {
+                  offset: offset,
+                  size: 0,
+                };
+                this._lastBatchedIndex = index;
+              } else {
+                this._cellSizeAndPositionData[i] = {
+                  offset: offset,
+                  size: size,
+                };
+                offset += size;
+                this._lastMeasuredIndex = index;
+              }
+            }
+          }
 
-      var lastMeasuredCellSizeAndPosition = this.getSizeAndPositionOfLastMeasuredCell();
-      var totalSizeOfMeasuredCells = lastMeasuredCellSizeAndPosition.offset + lastMeasuredCellSizeAndPosition.size;
-      var numUnmeasuredCells = this._cellCount - this._lastMeasuredIndex - 1;
-      var totalSizeOfUnmeasuredCells = numUnmeasuredCells * this._estimatedCellSize;
-      return totalSizeOfMeasuredCells + totalSizeOfUnmeasuredCells;
-    }
-    /**
-     * Determines a new offset that ensures a certain cell is visible, given the current offset.
-     * If the cell is already visible then the current offset will be returned.
-     * If the current offset is too great or small, it will be adjusted just enough to ensure the specified index is visible.
-     *
-     * @param align Desired alignment within container; one of "auto" (default), "start", or "end"
-     * @param containerSize Size (width or height) of the container viewport
-     * @param currentOffset Container's current (x or y) offset
-     * @param totalSize Total size (width or height) of all cells
-     * @return Offset to use to ensure the specified cell is visible
-     */
+          return this._cellSizeAndPositionData[index];
+        },
+        /**
+         * This method returns the size and position for the cell at the specified index.
+         * It decides on the correct calculation method according to the type of CellSize.
+         */
+      },
+      {
+        key: 'getSizeAndPositionOfCell',
+        value: function getSizeAndPositionOfCell(
+          index,
+          /*: number*/
+        ) /*: SizeAndPositionData*/
+        {
+          this._validateIndex(index);
 
-  }, {
-    key: "getUpdatedOffsetForIndex",
-    value: function getUpdatedOffsetForIndex(_ref3) {
-      var _ref3$align = _ref3.align,
-          align = _ref3$align === void 0 ? 'auto' : _ref3$align,
-          containerSize = _ref3.containerSize,
-          currentOffset = _ref3.currentOffset,
-          targetIndex = _ref3.targetIndex;
+          if (typeof this._cellSize === 'number') {
+            return this._arithmeticallyCalculateSizeAndPosition(index);
+          }
 
-      if (containerSize <= 0) {
-        return 0;
-      }
+          return this._iterativelyCalculateSizeAndPosition(index);
+        },
+      },
+      {
+        key: 'getSizeAndPositionOfLastMeasuredCell',
+        value: function getSizeAndPositionOfLastMeasuredCell() /*: SizeAndPositionData*/
+        {
+          return this._lastMeasuredIndex >= 0
+            ? this._cellSizeAndPositionData[this._lastMeasuredIndex]
+            : {
+                offset: 0,
+                size: 0,
+              };
+        },
+        /**
+         * Total size of all cells being measured.
+         * This value will be completely estimated initially.
+         * As cells are measured, the estimate will be updated.
+         * If cellSize is numeric, just calculate the height.
+         */
+      },
+      {
+        key: 'getTotalSize',
+        value: function getTotalSize() /*: number*/
+        {
+          if (typeof this._cellSize === 'number') {
+            return this._cellCount * this._cellSize;
+          }
 
-      var datum = this.getSizeAndPositionOfCell(targetIndex);
-      var maxOffset = datum.offset;
-      var minOffset = maxOffset - containerSize + datum.size;
-      var idealOffset;
+          var lastMeasuredCellSizeAndPosition = this.getSizeAndPositionOfLastMeasuredCell();
+          var totalSizeOfMeasuredCells =
+            lastMeasuredCellSizeAndPosition.offset +
+            lastMeasuredCellSizeAndPosition.size;
+          var numUnmeasuredCells =
+            this._cellCount - this._lastMeasuredIndex - 1;
+          var totalSizeOfUnmeasuredCells =
+            numUnmeasuredCells * this._estimatedCellSize;
+          return totalSizeOfMeasuredCells + totalSizeOfUnmeasuredCells;
+        },
+        /**
+         * Determines a new offset that ensures a certain cell is visible, given the current offset.
+         * If the cell is already visible then the current offset will be returned.
+         * If the current offset is too great or small, it will be adjusted just enough to ensure the specified index is visible.
+         *
+         * @param align Desired alignment within container; one of "auto" (default), "start", or "end"
+         * @param containerSize Size (width or height) of the container viewport
+         * @param currentOffset Container's current (x or y) offset
+         * @param totalSize Total size (width or height) of all cells
+         * @return Offset to use to ensure the specified cell is visible
+         */
+      },
+      {
+        key: 'getUpdatedOffsetForIndex',
+        value: function getUpdatedOffsetForIndex(_ref3) /*: number*/
+        {
+          var _ref3$align = _ref3.align,
+            align = _ref3$align === void 0 ? 'auto' : _ref3$align,
+            containerSize = _ref3.containerSize,
+            currentOffset = _ref3.currentOffset,
+            targetIndex = _ref3.targetIndex;
 
-      switch (align) {
-        case 'start':
-          idealOffset = maxOffset;
-          break;
+          if (containerSize <= 0) {
+            return 0;
+          }
 
-        case 'end':
-          idealOffset = minOffset;
-          break;
+          var datum = this.getSizeAndPositionOfCell(targetIndex);
+          var maxOffset = datum.offset;
+          var minOffset = maxOffset - containerSize + datum.size;
+          var idealOffset;
 
-        case 'center':
-          idealOffset = maxOffset - (containerSize - datum.size) / 2;
-          break;
+          switch (align) {
+            case 'start':
+              idealOffset = maxOffset;
+              break;
 
-        default:
-          idealOffset = Math.max(minOffset, Math.min(maxOffset, currentOffset));
-          break;
-      }
+            case 'end':
+              idealOffset = minOffset;
+              break;
 
-      var totalSize = this.getTotalSize();
-      return Math.max(0, Math.min(totalSize - containerSize, idealOffset));
-    }
-  }, {
-    key: "getVisibleCellRange",
-    value: function getVisibleCellRange(params) {
-      var containerSize = params.containerSize,
-          offset = params.offset;
-      var totalSize = this.getTotalSize();
+            case 'center':
+              idealOffset = maxOffset - (containerSize - datum.size) / 2;
+              break;
 
-      if (totalSize === 0) {
-        return {};
-      }
+            default:
+              idealOffset = Math.max(
+                minOffset,
+                Math.min(maxOffset, currentOffset),
+              );
+              break;
+          }
 
-      var maxOffset = offset + containerSize;
+          var totalSize = this.getTotalSize();
+          return Math.max(0, Math.min(totalSize - containerSize, idealOffset));
+        },
+      },
+      {
+        key: 'getVisibleCellRange',
+        value: function getVisibleCellRange(
+          params,
+          /*: GetVisibleCellRangeParams*/
+        ) /*: VisibleCellRange*/
+        {
+          var containerSize = params.containerSize,
+            offset = params.offset;
+          var totalSize = this.getTotalSize();
 
-      var start = this._findNearestCell(offset);
+          if (totalSize === 0) {
+            return {};
+          }
 
-      var datum = this.getSizeAndPositionOfCell(start);
-      offset = datum.offset + datum.size;
-      var stop = start;
+          var maxOffset = offset + containerSize;
 
-      while (offset < maxOffset && stop < this._cellCount - 1) {
-        stop++;
-        offset += this.getSizeAndPositionOfCell(stop).size;
-      }
+          var start = this._findNearestCell(offset);
 
-      return {
-        start: start,
-        stop: stop
-      };
-    }
-    /**
-     * Clear all cached values for cells after the specified index.
-     * This method should be called for any cell that has changed its size.
-     * It will not immediately perform any calculations; they'll be performed the next time getSizeAndPositionOfCell() is called.
-     */
+          var datum = this.getSizeAndPositionOfCell(start);
+          offset = datum.offset + datum.size;
+          var stop = start;
 
-  }, {
-    key: "resetCell",
-    value: function resetCell(index) {
-      this._lastMeasuredIndex = Math.min(this._lastMeasuredIndex, index - 1);
-    }
-  }, {
-    key: "_binarySearch",
-    value: function _binarySearch(high, low, offset) {
-      while (low <= high) {
-        var middle = low + Math.floor((high - low) / 2);
-        var currentOffset = this.getSizeAndPositionOfCell(middle).offset;
+          while (offset < maxOffset && stop < this._cellCount - 1) {
+            stop++;
+            offset += this.getSizeAndPositionOfCell(stop).size;
+          }
 
-        if (currentOffset === offset) {
-          return middle;
-        } else if (currentOffset < offset) {
-          low = middle + 1;
-        } else if (currentOffset > offset) {
-          high = middle - 1;
-        }
-      }
+          return {
+            start: start,
+            stop: stop,
+          };
+        },
+        /**
+         * Clear all cached values for cells after the specified index.
+         * This method should be called for any cell that has changed its size.
+         * It will not immediately perform any calculations; they'll be performed the next time getSizeAndPositionOfCell() is called.
+         */
+      },
+      {
+        key: 'resetCell',
+        value: function resetCell(
+          index,
+          /*: number*/
+        ) /*: void*/
+        {
+          this._lastMeasuredIndex = Math.min(
+            this._lastMeasuredIndex,
+            index - 1,
+          );
+        },
+      },
+      {
+        key: '_binarySearch',
+        value: function _binarySearch(
+          high,
+          /*: number*/
+          low,
+          /*: number*/
+          offset,
+          /*: number*/
+        ) /*: number*/
+        {
+          while (low <= high) {
+            var middle = low + Math.floor((high - low) / 2);
+            var currentOffset = this.getSizeAndPositionOfCell(middle).offset;
 
-      if (low > 0) {
-        return low - 1;
-      } else {
-        return 0;
-      }
-    }
-  }, {
-    key: "_exponentialSearch",
-    value: function _exponentialSearch(index, offset) {
-      var interval = 1;
+            if (currentOffset === offset) {
+              return middle;
+            } else if (currentOffset < offset) {
+              low = middle + 1;
+            } else if (currentOffset > offset) {
+              high = middle - 1;
+            }
+          }
 
-      while (index < this._cellCount && this.getSizeAndPositionOfCell(index).offset < offset) {
-        index += interval;
-        interval *= 2;
-      }
+          if (low > 0) {
+            return low - 1;
+          } else {
+            return 0;
+          }
+        },
+      },
+      {
+        key: '_exponentialSearch',
+        value: function _exponentialSearch(
+          index,
+          /*: number*/
+          offset,
+          /*: number*/
+        ) /*: number*/
+        {
+          var interval = 1;
 
-      return this._binarySearch(Math.min(index, this._cellCount - 1), Math.floor(index / 2), offset);
-    }
-  }, {
-    key: "_arithmeticallyCalculateNearesetCell",
-    value: function _arithmeticallyCalculateNearesetCell(offset) {
-      if (typeof this._cellSize !== 'number') {
-        throw Error("_arithmeticallyCalculateNearesetCell should only be called if CellSize is a number.\n         Current CellSize type is ".concat((0, _typeof2["default"])(this._cellSize), "."));
-      } // We need to return the nearest, yet lowest cell, so floor it
-      // We might get a very high offset so just return count - 1 is such a case, which
-      // mean offset to the last item
+          while (
+            index < this._cellCount &&
+            this.getSizeAndPositionOfCell(index).offset < offset
+          ) {
+            index += interval;
+            interval *= 2;
+          }
 
+          return this._binarySearch(
+            Math.min(index, this._cellCount - 1),
+            Math.floor(index / 2),
+            offset,
+          );
+        },
+      },
+      {
+        key: '_arithmeticallyCalculateNearesetCell',
+        value: function _arithmeticallyCalculateNearesetCell(
+          offset,
+          /*: number*/
+        ) /*: number*/
+        {
+          if (typeof this._cellSize !== 'number') {
+            throw Error(
+              '_arithmeticallyCalculateNearesetCell should only be called if CellSize is a number.\n         Current CellSize type is '.concat(
+                (0, _typeof2['default'])(this._cellSize),
+                '.',
+              ),
+            );
+          } // We need to return the nearest, yet lowest cell, so floor it
+          // We might get a very high offset so just return count - 1 is such a case, which
+          // mean offset to the last item
 
-      return Math.min(Math.floor(offset / this._cellSize), this._cellCount - 1);
-    }
-    /**
-     * Searches for the cell (index) nearest the specified offset.
-     *
-     * If no exact match is found the next lowest cell index will be returned.
-     * This allows partially visible cells (with offsets just before/above the fold) to be visible.
-     */
+          return Math.min(
+            Math.floor(offset / this._cellSize),
+            this._cellCount - 1,
+          );
+        },
+        /**
+         * Searches for the cell (index) nearest the specified offset.
+         *
+         * If no exact match is found the next lowest cell index will be returned.
+         * This allows partially visible cells (with offsets just before/above the fold) to be visible.
+         */
+      },
+      {
+        key: '_findNearestCell',
+        value: function _findNearestCell(
+          offset,
+          /*: number*/
+        ) /*: number*/
+        {
+          if (isNaN(offset)) {
+            throw Error('Invalid offset '.concat(offset, ' specified'));
+          } // Our search algorithms find the nearest match at or below the specified offset.
+          // So make sure the offset is at least 0 or no match will be found.
 
-  }, {
-    key: "_findNearestCell",
-    value: function _findNearestCell(offset) {
-      if (isNaN(offset)) {
-        throw Error("Invalid offset ".concat(offset, " specified"));
-      } // Our search algorithms find the nearest match at or below the specified offset.
-      // So make sure the offset is at least 0 or no match will be found.
+          offset = Math.max(0, offset); // If cell size is a numeric value, we can calc the lowest cell instead of running
+          // search algorithms
 
+          if (typeof this._cellSize === 'number') {
+            return this._arithmeticallyCalculateNearesetCell(offset);
+          }
 
-      offset = Math.max(0, offset); // If cell size is a numeric value, we can calc the lowest cell instead of running
-      // search algorithms
+          var lastMeasuredCellSizeAndPosition = this.getSizeAndPositionOfLastMeasuredCell();
+          var lastMeasuredIndex = Math.max(0, this._lastMeasuredIndex);
 
-      if (typeof this._cellSize === 'number') {
-        return this._arithmeticallyCalculateNearesetCell(offset);
-      }
+          if (lastMeasuredCellSizeAndPosition.offset >= offset) {
+            // If we've already measured cells within this range just use a binary search as it's faster.
+            return this._binarySearch(lastMeasuredIndex, 0, offset);
+          } else {
+            // If we haven't yet measured this high, fallback to an exponential search with an inner binary search.
+            // The exponential search avoids pre-computing sizes for the full set of cells as a binary search would.
+            // The overall complexity for this approach is O(log n).
+            return this._exponentialSearch(lastMeasuredIndex, offset);
+          }
+        },
+      },
+    ]);
+    return CellSizeAndPositionManager;
+  })();
 
-      var lastMeasuredCellSizeAndPosition = this.getSizeAndPositionOfLastMeasuredCell();
-      var lastMeasuredIndex = Math.max(0, this._lastMeasuredIndex);
-
-      if (lastMeasuredCellSizeAndPosition.offset >= offset) {
-        // If we've already measured cells within this range just use a binary search as it's faster.
-        return this._binarySearch(lastMeasuredIndex, 0, offset);
-      } else {
-        // If we haven't yet measured this high, fallback to an exponential search with an inner binary search.
-        // The exponential search avoids pre-computing sizes for the full set of cells as a binary search would.
-        // The overall complexity for this approach is O(log n).
-        return this._exponentialSearch(lastMeasuredIndex, offset);
-      }
-    }
-  }]);
-  return CellSizeAndPositionManager;
-}();
-
-exports["default"] = CellSizeAndPositionManager;
+exports['default'] = CellSizeAndPositionManager;
